@@ -1,0 +1,18 @@
+FROM osimis/orthanc:23.9.2-full
+
+RUN apt-get update && ACCEPT_EULA=Y apt-get dist-upgrade -y && apt-get install -y openssl
+
+COPY server_cert.cnf .
+RUN openssl req  -nodes -new -x509 -days 3650 -keyout /etc/ssl/private/server.key -out /etc/ssl/certs/server.pem -config server_cert.cnf
+RUN mkdir -p /ssl && cat /etc/ssl/private/server.key /etc/ssl/certs/server.pem  > /ssl/keyAndCert.pem
+
+COPY orthanc_ext /python/orthanc_ext
+WORKDIR /python
+COPY setup.py README.rst HISTORY.rst ./
+# copy requirements file
+COPY ./requirements_dev.txt /app/requirements.txt
+# install dependencies
+RUN pip install --no-cache-dir --upgrade -r /app/requirements.txt
+RUN pip3 install httpx .[nats-event-publisher,pyorthanc] # does not get picked up in setup.py
+RUN python3 setup.py install
+COPY tests/entry_point.py /python/entry_point.py

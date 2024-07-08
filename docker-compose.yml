@@ -1,0 +1,76 @@
+version: "3"
+services:
+    zookeeper:
+        image: wurstmeister/zookeeper:latest
+        ports:
+          - "2181:2181"
+        networks:
+            - local
+
+    kafka:
+        image: wurstmeister/kafka:latest
+        ports:
+          - "9092:9092"
+        expose:
+          - "9093"
+        environment:
+          KAFKA_ADVERTISED_LISTENERS: INSIDE://kafka:9093,OUTSIDE://kafka:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+          KAFKA_LISTENERS: INSIDE://0.0.0.0:9093,OUTSIDE://0.0.0.0:9092
+          KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+          KAFKA_CREATE_TOPICS: "my-topic:1:1"
+        volumes:
+          - /var/run/docker.sock:/var/run/docker.sock
+        networks:
+            - kafka
+            - local
+
+    nats:
+        image: nats
+        command:
+            -   '-js'
+        networks:
+            - local
+
+    orthanc:
+        image: local/orthanc
+        build: .
+        volumes:
+            - ./orthanc_ext/:/python/orthanc_ext
+            - ./orthanc.json:/etc/orthanc/orthanc.json:ro
+        environment:
+            VERBOSE_ENABLED: "true"
+            ORTHANC__SSL_ENABLED: "false"
+            ORTHANC__SSL_CERTIFICATE: "/ssl/keyAndCert.pem"
+            ORTHANC__OVERWRITE_INSTANCES: "true"
+            ORTHANC__PYTHON_VERBOSE: "false"
+            ORTHANC__HTTP_PORT: "8042"
+            ORTHANC__PYTHON_SCRIPT: "/python/entry_point.py"
+            ORTHANC__REGISTERED_USERS: |
+                {"demo": "demo"}
+
+            NATS_URL: nats://nats
+        depends_on:
+            -   nats
+        ports:
+            - "127.0.0.1:4242:4242"
+            - "127.0.0.1:8042:8042"
+        networks:
+            - local
+            - kafka
+    consumer:
+        image: local/consumer
+        ports:
+            - "2020:2020"
+        command: uvicorn app.main:app --reload --workers 1 --host 0.0.0.0 --port 2020
+        environment:
+            KAFKA_URL: "kafka:9092"
+        networks:
+            - local
+            - kafka
+
+
+networks:
+    local:
+    kafka:
