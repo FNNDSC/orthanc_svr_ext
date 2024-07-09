@@ -51,6 +51,8 @@ services:
                 {"demo": "demo"}
 
             NATS_URL: nats://nats
+            KAFKA_URL: ""
+            KAFKA_TOPIC: "test"
         depends_on:
             -   nats
         ports:

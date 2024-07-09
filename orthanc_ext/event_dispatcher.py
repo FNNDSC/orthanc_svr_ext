@@ -19,6 +19,7 @@ kafka_url = os.getenv('KAFKA_URL')
 orthanc_url = os.getenv('ORTHANC_URL')
 username = os.getenv('USERNAME')
 password = os.getenv('PASSWORD')
+kafka_topic = os.getenv('KAFKA_TOPIC')
 conf = {'bootstrap.servers': f'{kafka_url},{kafka_url}'}
 client = pyorthanc.Orthanc(orthanc_url,username,password)
 #client = PyOrthancClientType.SYNC.create_internal_client(base_url='http://localhost:8042',token="Basic ZGVtbzpkZW1v")
@@ -71,7 +72,7 @@ def register_event_handlers(
 
         sync_handlers = get_sync_handlers(handlers)
         async_handlers = get_async_handlers(handlers)
-        tags = client.get_patients()
+        #tags = client.get_patients()
         ds = {}
         patients = pyorthanc.find_patients(client, {'PatientName': '*'})
         for patient in patients:
@@ -88,7 +89,7 @@ def register_event_handlers(
                             ds['Modality'] = str(pydicom_ds.data_element('Modality')).split(':')[1]
                             ds['SeriesInstanceUID'] = str(pydicom_ds.data_element('SeriesInstanceUID')).split(':')[1]
                             ds['StudyInstanceUID'] = str(pydicom_ds.data_element('StudyInstanceUID')).split(':')[1]
-                producer.produce("test", key="key", value=str(ds), callback=acked)
+                producer.produce(kafka_topic, key="key", value=str(ds), callback=acked)
 
                 # Wait up to 1 second for events. Callbacks will be invoked during
                 # this method call if the message is acknowledged.
