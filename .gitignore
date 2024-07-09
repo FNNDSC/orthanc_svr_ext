@@ -1,0 +1,15 @@
+*~
+*.DS_Store
+cmd.sh
+run-MainThread.log
+*.egg-info
+__pycache__
+docs/build
+.coverage
+htmlcov
+.docker
+.idea/
+.vscode/
+database
+venv
+*.csv
